@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Cards — повторение</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f9f8f5;
+    --surface: #ffffff;
+    --surface2: #f2f0eb;
+    --border: #e0ddd5;
+    --border2: #ccc9bf;
+    --text: #1a1a18;
+    --text2: #5a5852;
+    --text3: #9a9790;
+    --accent: #3a5fd9;
+    --accent-bg: #eef1fc;
+    --green: #2d7a4f;
+    --green-bg: #eaf4ee;
+    --red: #b93030;
+    --red-bg: #fdf0f0;
+    --amber: #7a5200;
+    --amber-bg: #fdf6e3;
+    --mono: 'Courier New', monospace;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .header-sub { font-size: 12px; color: var(--text3); }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: var(--radius); padding: 4px; }
+  .tab { font-size: 12px; padding: 5px 12px; border-radius: 7px; border: none; background: none; color: var(--text2); cursor: pointer; font-weight: 500; transition: all 0.15s; white-space: nowrap; }
+  .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  .screen { display: none; max-width: 620px; margin: 0 auto; padding: 1.5rem 1.25rem; }
+  .screen.active { display: block; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.25rem; }
+  .filter-btn { font-size: 12px; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .filter-btn.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+
+  .progress-bar { height: 4px; background: var(--border); border-radius: 4px; margin-bottom: 1.25rem; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
+
+  .counter-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text3); margin-bottom: 1rem; }
+
+  /* FLASHCARD */
+  .flip-area { perspective: 1000px; height: 200px; margin-bottom: 1.25rem; cursor: pointer; }
+  .flip-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.45s; }
+  .flip-inner.flipped { transform: rotateY(180deg); }
+  .card-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center; }
+  .card-back { background: var(--surface2); transform: rotateY(180deg); }
+  .card-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 12px; }
+  .card-code { font-family: var(--mono); font-size: 16px; color: var(--text); }
+  .card-answer { font-size: 14px; color: var(--text); line-height: 1.6; white-space: pre-line; }
+  .card-hint { font-size: 11px; color: var(--text3); margin-top: 10px; }
+
+  .card-actions { display: flex; gap: 8px; margin-bottom: 1rem; }
+  .btn { padding: 8px 18px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-correct { border-color: var(--green); color: var(--green); background: var(--green-bg); flex: 1; }
+  .btn-wrong { border-color: var(--red); color: var(--red); background: var(--red-bg); flex: 1; }
+  .btn-nav { padding: 8px 16px; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { opacity: 0.9; }
+
+  .note-row { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
+  .note-input { flex: 1; font-size: 13px; padding: 6px 10px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); resize: none; font-family: inherit; line-height: 1.5; }
+  .note-input::placeholder { color: var(--text3); }
+  .btn-save-note { font-size: 12px; padding: 6px 12px; white-space: nowrap; }
+
+  /* FILL IN BLANK */
+  .fill-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.25rem; }
+  .fill-desc { font-size: 13px; color: var(--text2); margin-bottom: 12px; line-height: 1.6; }
+  .fill-code { font-family: var(--mono); font-size: 14px; background: var(--surface2); border-radius: var(--radius); padding: 12px 16px; line-height: 2; color: var(--text); }
+  .blank { display: inline-block; min-width: 100px; border-bottom: 2px solid var(--accent); color: var(--accent); font-weight: 600; text-align: center; padding: 0 4px; }
+  .options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
+  .option-btn { text-align: left; font-family: var(--mono); font-size: 13px; padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.15s; }
+  .option-btn:hover { background: var(--surface2); }
+  .option-btn.correct { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+  .option-btn.wrong { border-color: var(--red); background: var(--red-bg); color: var(--red); }
+  .option-btn.disabled { pointer-events: none; }
+  .feedback { font-size: 13px; padding: 10px 14px; border-radius: var(--radius); margin-bottom: 1rem; display: none; }
+  .feedback.show { display: block; }
+  .feedback.ok { background: var(--green-bg); color: var(--green); border: 1px solid #b7dfc8; }
+  .feedback.fail { background: var(--red-bg); color: var(--red); border: 1px solid #f5c0c0; }
+
+  /* BUG HUNT */
+  .bug-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.25rem; }
+  .bug-desc { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+  .code-lines { font-family: var(--mono); font-size: 13px; background: var(--surface2); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+  .code-line { display: flex; gap: 12px; align-items: flex-start; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s; border: 1.5px solid transparent; }
+  .code-line:hover { background: var(--border); }
+  .code-line.selected { background: var(--amber-bg); border-color: #e0c060; }
+  .code-line.correct-bug { background: var(--red-bg); border-color: #f5c0c0; }
+  .code-line.not-bug { background: var(--green-bg); border-color: #b7dfc8; }
+  .line-num { color: var(--text3); min-width: 20px; user-select: none; font-size: 12px; padding-top: 1px; }
+  .line-code { color: var(--text); flex: 1; white-space: pre-wrap; }
+  .bug-hint { font-size: 12px; color: var(--text3); margin-bottom: 1rem; }
+  .bug-submit { margin-bottom: 1rem; }
+  .bug-explanation { font-size: 13px; margin-bottom: 1rem; display: none; }
+  .bug-explanation.show { display: block; }
+  .bug-exp-item { padding: 8px 12px; border-radius: var(--radius); margin-bottom: 6px; border-left: 3px solid; }
+  .bug-exp-item.is-bug { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .bug-exp-item.not-bug2 { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+  /* REPORT */
+  .report-section { margin-bottom: 2rem; }
+  .report-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+  .report-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 6px; }
+  .report-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .report-code { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .report-note { font-size: 12px; color: var(--text2); margin-top: 4px; font-style: italic; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .badge-wrong { background: var(--red-bg); color: var(--red); }
+  .badge-note { background: var(--amber-bg); color: var(--amber); }
+  .copy-btn { font-size: 12px; padding: 6px 14px; }
+  .stats-row { display: flex; gap: 12px; margin-bottom: 1.5rem; }
+  .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 600; }
+  .stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .stat-green { color: var(--green); }
+  .stat-red { color: var(--red); }
+  .stat-amber { color: var(--amber); }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 14px; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 0.75rem; }
+  .nav-row { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+  .mode-done { text-align: center; padding: 2rem 0; }
+  .mode-done h2 { font-size: 20px; font-weight: 600; margin-bottom: 0.5rem; }
+  .mode-done p { color: var(--text2); font-size: 14px; margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Java Cards</h1>
+    <div class="header-sub">повторение конструкций</div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('flash')">Карточки</button>
+    <button class="tab" onclick="switchTab('fill')">Заполни пробел</button>
+    <button class="tab" onclick="switchTab('bug')">Найди ошибку</button>
+    <button class="tab" onclick="switchTab('report')">Отчёт</button>
+  </div>
+</header>
+
+<!-- FLASHCARDS -->
+<div id="screen-flash" class="screen active">
+  <div class="filters" id="flash-filters">
+    <button class="filter-btn active" onclick="setFlashFilter('all',this)">Все</button>
+    <button class="filter-btn" onclick="setFlashFilter('fields',this)">Поля</button>
+    <button class="filter-btn" onclick="setFlashFilter('methods',this)">Методы</button>
+    <button class="filter-btn" onclick="setFlashFilter('modifiers',this)">Модификаторы</button>
+    <button class="filter-btn" onclick="setFlashFilter('objects',this)">Объекты</button>
+    <button class="filter-btn" onclick="setFlashFilter('other',this)">Другое</button>
+    <button class="filter-btn" onclick="setFlashFilter('problems',this)" id="btn-problems">⚠ Проблемные</button>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="flash-progress"></div></div>
+  <div class="counter-row">
+    <span id="flash-counter">1 / 20</span>
+    <span id="flash-tag" style="font-size:11px; background: var(--surface2); padding: 2px 8px; border-radius: 20px;"></span>
+  </div>
+
+  <div class="flip-area" onclick="flipFlash()">
+    <div class="flip-inner" id="flip-inner">
+      <div class="card-face">
+        <div class="card-label">Что это?</div>
+        <div class="card-code" id="flash-front"></div>
+        <div class="card-hint">нажми, чтобы увидеть ответ</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">Ответ</div>
+        <div class="card-answer" id="flash-back"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-actions" id="flash-verdict" style="display:none;">
+    <button class="btn btn-correct" onclick="markFlash(true)">✓ Знаю</button>
+    <button class="btn btn-wrong" onclick="markFlash(false)">✗ Не знаю</button>
+  </div>
+
+  <div id="flash-note-row" class="note-row" style="display:none;">
+    <textarea class="note-input" id="flash-note" rows="2" placeholder="Что забыла? Запиши для отчёта..."></textarea>
+    <button class="btn btn-save-note" onclick="saveNote()">Сохранить</button>
+  </div>
+
+  <div class="nav-row" style="margin-top: 12px;">
+    <button class="btn btn-nav" onclick="prevFlash()">← Назад</button>
+    <div></div>
+    <button class="btn btn-nav" onclick="nextFlash()">Вперёд →</button>
+  </div>
+</div>
+
+<!-- FILL IN BLANK -->
+<div id="screen-fill" class="screen">
+  <div class="progress-bar"><div class="progress-fill" id="fill-progress"></div></div>
+  <div class="counter-row">
+    <span id="fill-counter"></span>
+    <span id="fill-score" style="font-size:12px; color: var(--green);"></span>
+  </div>
+
+  <div class="fill-card">
+    <div class="fill-desc" id="fill-desc"></div>
+    <div class="fill-code" id="fill-code"></div>
+  </div>
+
+  <div class="options" id="fill-options"></div>
+  <div class="feedback" id="fill-feedback"></div>
+
+  <div class="nav-row">
+    <div></div>
+    <button class="btn btn-primary" id="fill-next-btn" onclick="nextFill()" style="display:none;">Дальше →</button>
+  </div>
+</div>
+
+<!-- BUG HUNT -->
+<div id="screen-bug" class="screen">
+  <div class="progress-bar"><div class="progress-fill" id="bug-progress"></div></div>
+  <div class="counter-row">
+    <span id="bug-counter"></span>
+    <span id="bug-score" style="font-size:12px; color: var(--green);"></span>
+  </div>
+
+  <div class="bug-card">
+    <div class="bug-desc" id="bug-desc"></div>
+    <div class="code-lines" id="bug-code"></div>
+  </div>
+
+  <div class="bug-hint" id="bug-hint"></div>
+  <div class="bug-explanation" id="bug-explanation"></div>
+
+  <div class="nav-row bug-submit">
+    <button class="btn btn-primary" id="bug-check-btn" onclick="checkBug()">Проверить</button>
+    <button class="btn btn-nav" id="bug-next-btn" onclick="nextBug()" style="display:none;">Дальше →</button>
+  </div>
+</div>
+
+<!-- REPORT -->
+<div id="screen-report" class="screen">
+  <div class="stats-row" id="report-stats"></div>
+
+  <div class="report-section" id="report-wrong-section">
+    <h3>Не знаю</h3>
+    <div id="report-wrong-list"></div>
+  </div>
+
+  <div class="report-section" id="report-notes-section">
+    <h3>Заметки</h3>
+    <div id="report-notes-list"></div>
+  </div>
+
+  <div id="report-empty" class="empty-state" style="display:none;">
+    Пока нет данных. Пройди карточки, чтобы увидеть отчёт.
+  </div>
+
+  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+    <button class="btn copy-btn btn-primary" onclick="copyReport()">Скопировать отчёт для Claude</button>
+    <button class="btn copy-btn" onclick="clearData()">Сбросить прогресс</button>
+  </div>
+</div>
+
+<script>
+const CARDS = [
+  { id:'c1', front:"private int freeParkingPlaces = 100;", back:"Приватное поле класса.\nТип int, начальное значение 100.\nНедоступно из других классов.", tag:"fields" },
+  { id:'c2', front:"public boolean isFull = false;", back:"Публичное поле класса.\nТип boolean, начальное значение false.\nДоступно из других классов.", tag:"fields" },
+  { id:'c3', front:"freeParkingPlaces", back:"Поле класса.\nБез скобок — это поле, не метод.", tag:"fields" },
+  { id:'c4', front:"grades.length", back:"Длина массива grades.\nКоличество элементов.", tag:"other" },
+  { id:'c5', front:"grades[grades.length - 1]", back:"Последний элемент массива.\nlength - 1 = последний индекс.", tag:"other" },
+  { id:'c6', front:"public void printInfo() { }", back:"Публичный метод.\nvoid = ничего не возвращает.\nСкобки () = признак метода.", tag:"methods" },
+  { id:'c7', front:"private void reserveParkingPlace() { }", back:"Приватный метод.\nДоступен только внутри своего класса.", tag:"methods" },
+  { id:'c8', front:"reserveParkingPlace()", back:"Вызов метода.\nСкобки () — всегда метод.", tag:"methods" },
+  { id:'c9', front:"public", back:"Модификатор доступа.\nДоступно из любого класса.", tag:"modifiers" },
+  { id:'c10', front:"private", back:"Модификатор доступа.\nДоступно только внутри своего класса.", tag:"modifiers" },
+  { id:'c11', front:"void", back:"Метод ничего не возвращает.\nПросто выполняет действие.", tag:"methods" },
+  { id:'c12', front:"return", back:"Вернуть результат из метода.\nИспользуется когда тип не void.", tag:"methods" },
+  { id:'c13', front:"Parking parking = new Parking();", back:"Создание объекта.\nParking — класс (чертёж).\nparking — переменная-объект.", tag:"objects" },
+  { id:'c14', front:"parking.reserveParkingPlace();", back:"Вызов метода объекта.\nobject.method()", tag:"objects" },
+  { id:'c15', front:"parking.freeParkingPlaces", back:"Обращение к полю объекта.\nobject.field", tag:"objects" },
+  { id:'c16', front:"new Parking()", back:"Создание нового объекта класса Parking.", tag:"objects" },
+  { id:'c17', front:"freeParkingPlaces--", back:"Уменьшить на 1.\nАналог: freeParkingPlaces = freeParkingPlaces - 1", tag:"other" },
+  { id:'c18', front:"freeParkingPlaces++", back:"Увеличить на 1.\nАналог: freeParkingPlaces = freeParkingPlaces + 1", tag:"other" },
+  { id:'c19', front:"public static final int TOTAL = 100;", back:"Константа.\nstatic final = значение не меняется.\nПишется ЗАГЛАВНЫМИ по соглашению.", tag:"fields" },
+  { id:'c20', front:"if (freeParkingPlaces == 0)", back:"Проверка условия.\n== означает «равно».\nНе путай с = (присваивание).", tag:"other" },
+];
+
+const FILL_QUESTIONS = [
+  { desc:"Объяви приватное поле типа int с именем count и значением 0.", code:"___ int count = 0;", blank:"___", answer:"private", options:["private","public","void"], explain:"private — модификатор, который закрывает доступ снаружи." },
+  { desc:"Объяви публичный метод, который ничего не возвращает.", code:"public ___ showInfo() { }", blank:"___", answer:"void", options:["void","int","return"], explain:"void означает, что метод ничего не возвращает." },
+  { desc:"Создай объект класса Car с именем myCar.", code:"Car myCar = new ___();", blank:"___", answer:"Car", options:["Car","car","new Car"], explain:"После new пишется имя класса с большой буквы." },
+  { desc:"Получи последний элемент массива prices.", code:"prices[prices.___ - 1]", blank:"___", answer:"length", options:["length","size","count"], explain:"length — свойство массива, возвращает количество элементов." },
+  { desc:"Вызови метод park() у объекта garage.", code:"garage.___();", blank:"___", answer:"park", options:["park","Park","new park"], explain:"Вызов метода: объект.метод(). Без new, без заглавной буквы." },
+  { desc:"Уменьши значение поля places на 1.", code:"places___;", blank:"___", answer:"--", options:["--","++","= 0"], explain:"-- уменьшает переменную на 1." },
+  { desc:"Проверь, равно ли значение x нулю.", code:"if (x ___ 0)", blank:"___", answer:"==", options:["==","=","!="], explain:"== проверяет равенство. = это присваивание, != это «не равно»." },
+  { desc:"Объяви константу — максимальное число мест равно 50.", code:"public static final int MAX_PLACES ___ 50;", blank:"___", answer:"=", options:["=","==","+="], explain:"= это присваивание. == используется только в условиях." },
+];
+
+const BUG_QUESTIONS = [
+  {
+    desc:"В классе Parking есть ошибки. Найди строки с ошибками и нажми на них.",
+    lines:[
+      "public class Parking {",
+      "    public int freePlaces = 100",
+      "    private Boolean isFull = false;",
+      "    public void reserve() {",
+      "        freePlaces--;",
+      "    }",
+      "}"
+    ],
+    bugs:[1,2],
+    explain:[
+      { line:1, text:"Строка 2: в конце строки пропущена точка с запятой ; — это обязательно в Java." },
+      { line:2, text:"Строка 3: тип boolean пишется с маленькой буквы. Boolean (с большой) — это другой класс." },
+    ]
+  },
+  {
+    desc:"Найди ошибки в коде создания объекта и вызова метода.",
+    lines:[
+      "class ParkingService {",
+      "    public static void main(String[] args) {",
+      "        Parking parking = Parking();",
+      "        parking.reserve();",
+      "        parking.freePlaces = -5;",
+      "        System.out.println(parking.freePlaces);",
+      "    }",
+      "}"
+    ],
+    bugs:[2,4],
+    explain:[
+      { line:2, text:"Строка 3: пропущено слово new. Объект создаётся через new ClassName()." },
+      { line:4, text:"Строка 5: -5 — некорректное значение для числа мест. Но главная проблема: поле freePlaces должно быть private, тогда присвоить снаружи вообще не выйдет." },
+    ]
+  },
+  {
+    desc:"Найди ошибки в объявлении метода и условии.",
+    lines:[
+      "public void checkFull() {",
+      "    if (freePlaces = 0) {",
+      "        isFull == true;",
+      "    }",
+      "}"
+    ],
+    bugs:[1,2],
+    explain:[
+      { line:1, text:"Строка 2: в условии нужно == (проверка), а не = (присваивание)." },
+      { line:2, text:"Строка 3: для присваивания нужно =, а не ==. isFull = true — верно." },
+    ]
+  },
+  {
+    desc:"Найди ошибки в объявлении полей класса.",
+    lines:[
+      "public class Car {",
+      "    private int speed = 0;",
+      "    Public String model = 'Toyota';",
+      "    private boolean isRunning = false",
+      "    void start() { isRunning = true; }",
+      "}"
+    ],
+    bugs:[2,3],
+    explain:[
+      { line:2, text:"Строка 3: модификатор пишется с маленькой буквы — public, не Public. Строки в Java в двойных кавычках \", не одинарных '." },
+      { line:3, text:"Строка 4: пропущена точка с запятой в конце объявления поля." },
+    ]
+  },
+];
+
+// STATE
+let state = JSON.parse(localStorage.getItem('jc_state') || '{}');
+if (!state.results) state.results = {};
+if (!state.notes) state.notes = {};
+
+function save() { localStorage.setItem('jc_state', JSON.stringify(state)); }
+
+// FLASHCARDS
+let flashFilter = 'all';
+let flashDeck = [];
+let flashIdx = 0;
+let flashFlipped = false;
+
+function getFlashDeck() {
+  if (flashFilter === 'problems') {
+    return CARDS.filter(c => state.results[c.id] === false);
+  }
+  if (flashFilter === 'all') return [...CARDS];
+  return CARDS.filter(c => c.tag === flashFilter);
+}
+
+function setFlashFilter(f, btn) {
+  flashFilter = f;
+  document.querySelectorAll('#flash-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  flashDeck = getFlashDeck();
+  flashIdx = 0;
+  resetFlipState();
+  renderFlash();
+}
+
+function resetFlipState() {
+  flashFlipped = false;
+  document.getElementById('flip-inner').classList.remove('flipped');
+  document.getElementById('flash-verdict').style.display = 'none';
+  document.getElementById('flash-note-row').style.display = 'none';
+}
+
+function renderFlash() {
+  if (!flashDeck.length) {
+    document.getElementById('flash-front').textContent = 'Нет карточек в этой категории';
+    document.getElementById('flash-back').textContent = '';
+    document.getElementById('flash-counter').textContent = '0 / 0';
+    document.getElementById('flash-progress').style.width = '0%';
+    document.getElementById('flash-tag').textContent = '';
+    return;
+  }
+  const c = flashDeck[flashIdx];
+  document.getElementById('flash-front').textContent = c.front;
+  document.getElementById('flash-back').textContent = c.back;
+  document.getElementById('flash-counter').textContent = (flashIdx+1) + ' / ' + flashDeck.length;
+  document.getElementById('flash-progress').style.width = ((flashIdx+1)/flashDeck.length*100) + '%';
+  document.getElementById('flash-tag').textContent = c.tag;
+  const note = state.notes[c.id];
+  document.getElementById('flash-note').value = note || '';
+}
+
+function flipFlash() {
+  flashFlipped = !flashFlipped;
+  document.getElementById('flip-inner').classList.toggle('flipped', flashFlipped);
+  if (flashFlipped) {
+    document.getElementById('flash-verdict').style.display = 'flex';
+    document.getElementById('flash-note-row').style.display = 'flex';
+  }
+}
+
+function markFlash(correct) {
+  const c = flashDeck[flashIdx];
+  state.results[c.id] = correct;
+  save();
+  nextFlash();
+}
+
+function saveNote() {
+  const c = flashDeck[flashIdx];
+  const val = document.getElementById('flash-note').value.trim();
+  if (val) state.notes[c.id] = val;
+  else delete state.notes[c.id];
+  save();
+  nextFlash();
+}
+
+function nextFlash() {
+  if (flashIdx < flashDeck.length - 1) flashIdx++;
+  resetFlipState();
+  renderFlash();
+}
+function prevFlash() {
+  if (flashIdx > 0) flashIdx--;
+  resetFlipState();
+  renderFlash();
+}
+
+// FILL IN BLANK
+let fillIdx = 0;
+let fillCorrect = 0;
+let fillAnswered = false;
+
+function renderFill() {
+  const q = FILL_QUESTIONS[fillIdx];
+  document.getElementById('fill-counter').textContent = (fillIdx+1) + ' / ' + FILL_QUESTIONS.length;
+  document.getElementById('fill-score').textContent = fillCorrect > 0 ? '✓ ' + fillCorrect + ' верно' : '';
+  document.getElementById('fill-progress').style.width = ((fillIdx+1)/FILL_QUESTIONS.length*100) + '%';
+  document.getElementById('fill-desc').textContent = q.desc;
+  document.getElementById('fill-code').innerHTML = q.code.replace(q.blank, '<span class="blank">' + q.blank + '</span>');
+  const opts = document.getElementById('fill-options');
+  opts.innerHTML = '';
+  const shuffled = [...q.options].sort(() => Math.random() - 0.5);
+  shuffled.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'option-btn';
+    b.textContent = o;
+    b.onclick = () => checkFill(o, b, q);
+    opts.appendChild(b);
+  });
+  document.getElementById('fill-feedback').className = 'feedback';
+  document.getElementById('fill-feedback').textContent = '';
+  document.getElementById('fill-next-btn').style.display = 'none';
+  fillAnswered = false;
+}
+
+function checkFill(answer, btn, q) {
+  if (fillAnswered) return;
+  fillAnswered = true;
+  const correct = answer === q.answer;
+  if (correct) fillCorrect++;
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  document.querySelectorAll('.option-btn').forEach(b => {
+    b.classList.add('disabled');
+    if (b.textContent === q.answer) b.classList.add('correct');
+  });
+  const fb = document.getElementById('fill-feedback');
+  fb.textContent = (correct ? '✓ Верно! ' : '✗ Неверно. ') + q.explain;
+  fb.className = 'feedback show ' + (correct ? 'ok' : 'fail');
+  document.getElementById('fill-score').textContent = '✓ ' + fillCorrect + ' верно';
+  document.getElementById('fill-next-btn').style.display = 'block';
+}
+
+function nextFill() {
+  if (fillIdx < FILL_QUESTIONS.length - 1) {
+    fillIdx++;
+    renderFill();
+  } else {
+    document.getElementById('screen-fill').innerHTML = '<div class="mode-done"><h2>Готово!</h2><p>Верных ответов: ' + fillCorrect + ' из ' + FILL_QUESTIONS.length + '</p><button class="btn btn-primary" onclick="fillIdx=0;fillCorrect=0;renderFill()">Начать заново</button></div>';
+  }
+}
+
+// BUG HUNT
+let bugIdx = 0;
+let bugCorrect = 0;
+let bugSelected = new Set();
+let bugAnswered = false;
+
+function renderBug() {
+  const q = BUG_QUESTIONS[bugIdx];
+  document.getElementById('bug-counter').textContent = (bugIdx+1) + ' / ' + BUG_QUESTIONS.length;
+  document.getElementById('bug-score').textContent = bugCorrect > 0 ? '✓ ' + bugCorrect + ' верно' : '';
+  document.getElementById('bug-progress').style.width = ((bugIdx+1)/BUG_QUESTIONS.length*100) + '%';
+  document.getElementById('bug-desc').textContent = q.desc;
+  document.getElementById('bug-hint').textContent = 'Ошибок: ' + q.bugs.length + '. Нажми на строки, где есть ошибка.';
+  const codeEl = document.getElementById('bug-code');
+  codeEl.innerHTML = '';
+  q.lines.forEach((line, i) => {
+    const div = document.createElement('div');
+    div.className = 'code-line';
+    div.dataset.line = i;
+    div.innerHTML = '<span class="line-num">' + (i+1) + '</span><span class="line-code">' + line + '</span>';
+    div.onclick = () => toggleBugLine(i, div);
+    codeEl.appendChild(div);
+  });
+  document.getElementById('bug-explanation').className = 'bug-explanation';
+  document.getElementById('bug-explanation').innerHTML = '';
+  document.getElementById('bug-check-btn').style.display = 'block';
+  document.getElementById('bug-next-btn').style.display = 'none';
+  bugSelected = new Set();
+  bugAnswered = false;
+}
+
+function toggleBugLine(i, div) {
+  if (bugAnswered) return;
+  if (bugSelected.has(i)) {
+    bugSelected.delete(i);
+    div.classList.remove('selected');
+  } else {
+    bugSelected.add(i);
+    div.classList.add('selected');
+  }
+}
+
+function checkBug() {
+  if (bugAnswered) return;
+  bugAnswered = true;
+  const q = BUG_QUESTIONS[bugIdx];
+  const correct = q.bugs.every(b => bugSelected.has(b)) && bugSelected.size === q.bugs.length;
+  if (correct) bugCorrect++;
+  document.querySelectorAll('.code-line').forEach(div => {
+    const i = parseInt(div.dataset.line);
+    if (q.bugs.includes(i)) div.classList.add('correct-bug');
+    else if (bugSelected.has(i)) div.classList.add('not-bug');
+  });
+  const expEl = document.getElementById('bug-explanation');
+  expEl.innerHTML = q.explain.map(e =>
+    '<div class="bug-exp-item is-bug"><strong>Строка ' + (e.line+1) + ':</strong> ' + e.text + '</div>'
+  ).join('');
+  expEl.className = 'bug-explanation show';
+  document.getElementById('bug-score').textContent = '✓ ' + bugCorrect + ' верно';
+  document.getElementById('bug-check-btn').style.display = 'none';
+  document.getElementById('bug-next-btn').style.display = 'block';
+}
+
+function nextBug() {
+  if (bugIdx < BUG_QUESTIONS.length - 1) {
+    bugIdx++;
+    renderBug();
+  } else {
+    document.getElementById('screen-bug').innerHTML = '<div class="mode-done"><h2>Готово!</h2><p>Верных ответов: ' + bugCorrect + ' из ' + BUG_QUESTIONS.length + '</p><button class="btn btn-primary" onclick="bugIdx=0;bugCorrect=0;renderBug()">Начать заново</button></div>';
+  }
+}
+
+// REPORT
+function renderReport() {
+  const wrong = CARDS.filter(c => state.results[c.id] === false);
+  const withNotes = CARDS.filter(c => state.notes[c.id]);
+  const known = CARDS.filter(c => state.results[c.id] === true);
+  const total = Object.keys(state.results).length;
+
+  document.getElementById('report-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num stat-green">${known.length}</div><div class="stat-label">Знаю</div></div>
+    <div class="stat-card"><div class="stat-num stat-red">${wrong.length}</div><div class="stat-label">Не знаю</div></div>
+    <div class="stat-card"><div class="stat-num stat-amber">${withNotes.length}</div><div class="stat-label">С заметками</div></div>
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Пройдено</div></div>
+  `;
+
+  const wrongList = document.getElementById('report-wrong-list');
+  wrongList.innerHTML = wrong.length ? wrong.map(c => `
+    <div class="report-card">
+      <div class="report-card-top">
+        <span class="report-code">${c.front}</span>
+        <span class="badge badge-wrong">не знаю</span>
+      </div>
+      ${state.notes[c.id] ? '<div class="report-note">📝 ' + state.notes[c.id] + '</div>' : ''}
+    </div>
+  `).join('') : '<div style="color: var(--text3); font-size:13px;">Отличная работа — все карточки знаешь!</div>';
+
+  const notesList = document.getElementById('report-notes-list');
+  const onlyNotes = withNotes.filter(c => state.results[c.id] !== false);
+  notesList.innerHTML = onlyNotes.length ? onlyNotes.map(c => `
+    <div class="report-card">
+      <div class="report-card-top">
+        <span class="report-code">${c.front}</span>
+        <span class="badge badge-note">заметка</span>
+      </div>
+      <div class="report-note">📝 ${state.notes[c.id]}</div>
+    </div>
+  `).join('') : '<div style="color: var(--text3); font-size:13px;">Заметок пока нет.</div>';
+
+  const isEmpty = total === 0;
+  document.getElementById('report-empty').style.display = isEmpty ? 'block' : 'none';
+}
+
+function copyReport() {
+  const wrong = CARDS.filter(c => state.results[c.id] === false);
+  const withNotes = CARDS.filter(c => state.notes[c.id]);
+  const known = CARDS.filter(c => state.results[c.id] === true);
+  let text = '## Отчёт по карточкам Java\n\n';
+  text += `Знаю: ${known.length} | Не знаю: ${wrong.length} | Заметок: ${withNotes.length}\n\n`;
+  if (wrong.length) {
+    text += '### Проблемные конструкции:\n';
+    wrong.forEach(c => {
+      text += '- `' + c.front + '`';
+      if (state.notes[c.id]) text += '\n  > ' + state.notes[c.id];
+      text += '\n';
+    });
+  }
+  if (withNotes.filter(c => state.results[c.id] !== false).length) {
+    text += '\n### Заметки:\n';
+    withNotes.filter(c => state.results[c.id] !== false).forEach(c => {
+      text += '- `' + c.front + '`: ' + state.notes[c.id] + '\n';
+    });
+  }
+  navigator.clipboard.writeText(text).then(() => alert('Отчёт скопирован! Вставь его в чат с Claude.'));
+}
+
+function clearData() {
+  if (confirm('Сбросить весь прогресс?')) {
+    state = { results: {}, notes: {} };
+    save();
+    renderReport();
+  }
+}
+
+// TABS
+function switchTab(t) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + t).classList.add('active');
+  event.target.classList.add('active');
+  if (t === 'report') renderReport();
+}
+
+// INIT
+flashDeck = getFlashDeck();
+renderFlash();
+renderFill();
+renderBug();
+</script>
+</body>
+</html>
