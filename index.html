@@ -417,7 +417,7 @@ function renderModal(){
     var rows=logs.length?logs.map(function(l,i){
       return '<div class="lr"><span class="lt">'+fmtM(l.mins)+'</span><span class="ln">'+(l.note?esc(l.note):'—')+'</span><button class="ldel" onclick="removeLog(\''+cat.id+'\',\''+m.dk+'\','+i+')">×</button></div>';
     }).join(''):'<div class="ehi">Нет записей</div>';
-    var sumline=dm>0?'<div style="font-size:12px;color:var(--txt2);margin-bottom:.5rem">За день: <b style="color:var(--txt)">'+fmtM(dm)+'</b>'+(gm>0?' &nbsp;·&nbsp; Цель: <b style="color:var(--txt)">'+fmtM(tm)+'/'+fmtM(gm)+'</b>')+'</div>':'';
+    var sumline=dm>0?'<div style="font-size:12px;color:var(--txt2);margin-bottom:.5rem">За день: <b style="color:var(--txt)">'+fmtM(dm)+'</b>'+(gm>0?' &nbsp;·&nbsp; Цель: <b style="color:var(--txt)">'+fmtM(tm)+'/'+fmtM(gm)+'</b>':'')+'</div>':'';
     ov.innerHTML='<div class="modal"><h3 style="color:'+cat.color+'">⏱ '+esc(cat.name)+' — '+m.dk+'</h3>'+sumline+'<div class="llist">'+rows+'</div><div class="fld"><label>Время &nbsp;<span style="opacity:.6">(1.5 → 1ч30м, 40м, 2ч)</span></label><input id="ti" placeholder="напр. 1.5 или 40м" autocomplete="off"/></div><div class="fld"><label>Заметка (необязательно)</label><input id="ni" placeholder="Глава 5, задача..." autocomplete="off"/></div><div class="mact"><button class="btn" onclick="closeM()">Закрыть</button><button class="btn accent" onclick="submitLog(\''+cat.id+'\',\''+m.dk+'\')">+ Списать</button></div></div>';
     root.appendChild(ov);
     var ti=document.getElementById('ti');
